@@ -33,19 +33,25 @@ class Evaluator(object):
             done = False
             while not done:
                 # basic operation, action ,reward, blablabla ...
-                action = policy(observation)
+                if type(observation) is tuple:
+                    action = policy(observation[0])
+                else:
+                    action = policy(observation)
 
-                observation, reward, done, info = env.step(action)
+                observation, reward, done, truncated, info = env.step(action)
                 if self.max_episode_length and episode_steps >= self.max_episode_length -1:
                     done = True
-                
+                # import pdb; pdb.set_trace()
                 if visualize:
-                    env.render(mode='human')
+                    # env.render(mode='human')
+                    env.render()
 
                 # update
                 episode_reward += reward
                 episode_steps += 1
 
+
+            # if episode == (self.num_episodes - 1): import pdb; pdb.set_trace()
             if debug: prYellow('[Evaluate] #Episode{}: episode_reward:{}'.format(episode,episode_reward))
             result.append(episode_reward)
 

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3 
+import sys
+sys.path.append('/Users/venkatramnankalyanakumar/Desktop/OSU/fall2023/ROB_537/project/Learning-MP')
+
 
 import numpy as np
 import argparse
@@ -10,8 +13,10 @@ from normalized_env import NormalizedEnv
 from evaluator import Evaluator
 from ddpg import DDPG
 from util import *
+from environments.DiffDriveEnv import *
 
-gym.undo_logger_setup()
+class DDoj(object):
+    pass
 
 def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_episode_length=None, debug=False):
 
@@ -22,7 +27,7 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
     while step < num_iterations:
         # reset if it is the start of episode
         if observation is None:
-            observation = deepcopy(env.reset())
+            observation = deepcopy(env.reset()[0] if type(env.reset()) is tuple else env.reset())
             agent.reset(observation)
 
         # agent pick action ...
@@ -32,7 +37,7 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
             action = agent.select_action(observation)
         
         # env response with next_observation, reward, terminate_info
-        observation2, reward, done, info = env.step(action)
+        observation2, reward, done, truncated, info = env.step(action)
         observation2 = deepcopy(observation2)
         if max_episode_length and episode_steps >= max_episode_length -1:
             done = True
@@ -72,6 +77,8 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
             episode_steps = 0
             episode_reward = 0.
             episode += 1
+            # Plotting it so that each time it stores it in the output folder
+            env.plot()
 
 def test(num_episodes, agent, env, evaluate, model_path, visualize=True, debug=False):
 
@@ -90,7 +97,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch on TORCS with Multi-modal')
 
     parser.add_argument('--mode', default='train', type=str, help='support option: train/test')
-    parser.add_argument('--env', default='Pendulum-v0', type=str, help='open-ai gym environment')
+    parser.add_argument('--env', default='Pendulum-v1', type=str, help='open-ai gym environment')
     parser.add_argument('--hidden1', default=400, type=int, help='hidden num of first fully connect layer')
     parser.add_argument('--hidden2', default=300, type=int, help='hidden num of second fully connect layer')
     parser.add_argument('--rate', default=0.001, type=float, help='learning rate')
@@ -118,17 +125,38 @@ if __name__ == "__main__":
     # parser.add_argument('--cuda', dest='cuda', action='store_true') # TODO
 
     args = parser.parse_args()
-    args.output = get_output_folder(args.output, args.env)
+    
     if args.resume == 'default':
         args.resume = 'output/{}-run0'.format(args.env)
 
-    env = NormalizedEnv(gym.make(args.env))
+    # env = NormalizedEnv(gym.make(args.env))
+    
+    if args.env == "Diffcar":
+        args.output = get_output_folder(args.output, 'Diffcar')
+        obsts_list = [
+            {'xyt': [25, 25, 0], 'size': [5, 5]},
+            {'xyt': [20, 10, np.pi/4], 'size': [5, 1]},
+            {'xyt': [10, 30, 0], 'size': [1, 30]}
+        ]
+        obsts = Obstacles(obsts_list)
+
+
+        env = DiffDriveEnv(obstacles=obsts, 
+                            obs_space_size = np.array([0,50,0,50]), 
+                            agent_pos= [5,5,0], target_pos = [47,47,np.pi/4])
+    else:
+        args.output = get_output_folder(args.output, args.env)
+        env = gym.make(args.env, render_mode='human')
 
     if args.seed > 0:
         np.random.seed(args.seed)
         env.seed(args.seed)
 
-    nb_states = env.observation_space.shape[0]
+    if args.env == "Diffcar":
+        nb_states = env.observation_space['agent'].shape[0]
+    else:
+        nb_states = env.observation_space.shape[0]
+
     nb_actions = env.action_space.shape[0]
 
 
@@ -146,3 +174,5 @@ if __name__ == "__main__":
 
     else:
         raise RuntimeError('undefined mode {}'.format(args.mode))
+
+
