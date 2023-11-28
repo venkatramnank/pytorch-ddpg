@@ -41,7 +41,7 @@ class Evaluator(object):
                 observation, reward, done, truncated, info = env.step(action)
                 if self.max_episode_length and episode_steps >= self.max_episode_length -1:
                     done = True
-                # import pdb; pdb.set_trace()
+
                 if visualize:
                     # env.render(mode='human')
                     env.render()

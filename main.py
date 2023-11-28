@@ -18,7 +18,7 @@ from environments.DiffDriveEnv import *
 class DDoj(object):
     pass
 
-def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_episode_length=None, debug=False):
+def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_episode_length=None, debug=False, visualize=False):
 
     agent.is_training = True
     step = episode = episode_steps = 0
@@ -77,8 +77,9 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
             episode_steps = 0
             episode_reward = 0.
             episode += 1
+            
             # Plotting it so that each time it stores it in the output folder
-            env.plot()
+            # env.plot()
 
 def test(num_episodes, agent, env, evaluate, model_path, visualize=True, debug=False):
 
@@ -141,9 +142,8 @@ if __name__ == "__main__":
         obsts = Obstacles(obsts_list)
 
 
-        env = DiffDriveEnv(obstacles=obsts, 
-                            obs_space_size = np.array([0,50,0,50]), 
-                            agent_pos= [5,5,0], target_pos = [47,47,np.pi/4])
+        env = DiffDriveEnv(render_mode="human", obstacles=obsts, obs_space_size = np.array([0,50,0,50]), 
+                       agent_pos= [5,5,0], target_pos = [47,47,np.pi/4],pot_weight=[1.0,100.0])
     else:
         args.output = get_output_folder(args.output, args.env)
         env = gym.make(args.env, render_mode='human')
@@ -160,13 +160,13 @@ if __name__ == "__main__":
     nb_actions = env.action_space.shape[0]
 
 
-    agent = DDPG(nb_states, nb_actions, args)
+    agent = DDPG(nb_states, nb_actions, env, args)
     evaluate = Evaluator(args.validate_episodes, 
         args.validate_steps, args.output, max_episode_length=args.max_episode_length)
 
     if args.mode == 'train':
         train(args.train_iter, agent, env, evaluate, 
-            args.validate_steps, args.output, max_episode_length=args.max_episode_length, debug=args.debug)
+            args.validate_steps, args.output, max_episode_length=args.max_episode_length, debug=args.debug, visualize=True)
 
     elif args.mode == 'test':
         test(args.validate_episodes, agent, env, evaluate, args.resume,

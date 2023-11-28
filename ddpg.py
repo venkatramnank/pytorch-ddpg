@@ -15,13 +15,14 @@ from util import *
 criterion = nn.MSELoss()
 
 class DDPG(object):
-    def __init__(self, nb_states, nb_actions, args):
+    def __init__(self, nb_states, nb_actions, env, args):
         
         if args.seed > 0:
             self.seed(args.seed)
 
         self.nb_states = nb_states
         self.nb_actions= nb_actions
+        self.env = env
         
         # Create Actor and Critic Network
         net_cfg = {
@@ -126,7 +127,8 @@ class DDPG(object):
             self.actor(to_tensor(np.array([s_t])))
         ).squeeze(0)
         action += self.is_training*max(self.epsilon, 0)*self.random_process.sample()
-        action = np.clip(action, -1., 1.)
+        # action = np.clip(action, -1., 1.)
+        action = np.clip(action, self.env.action_space.low, self.env.action_space.high)
 
         if decay_epsilon:
             self.epsilon -= self.depsilon
