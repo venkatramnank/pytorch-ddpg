@@ -1,6 +1,6 @@
 #!/usr/bin/env python3 
 import sys
-sys.path.append('/Users/venkatramnankalyanakumar/Desktop/OSU/fall2023/ROB_537/project/Learning-MP')
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 
 import numpy as np
