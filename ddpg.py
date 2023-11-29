@@ -22,7 +22,6 @@ class DDPG(object):
 
         self.nb_states = nb_states
         self.nb_actions= nb_actions
-        self.env = env
         
         # Create Actor and Critic Network
         net_cfg = {
@@ -56,7 +55,8 @@ class DDPG(object):
         self.s_t = None # Most recent state
         self.a_t = None # Most recent action
         self.is_training = True
-
+        
+        self.env = env
         # 
         if USE_CUDA: self.cuda()
 
@@ -127,8 +127,7 @@ class DDPG(object):
             self.actor(to_tensor(np.array([s_t])))
         ).squeeze(0)
         action += self.is_training*max(self.epsilon, 0)*self.random_process.sample()
-        # action = np.clip(action, -1., 1.)
-        action = np.clip(action, self.env.action_space.low, self.env.action_space.high)
+        action = self.env.clip_action(action)
 
         if decay_epsilon:
             self.epsilon -= self.depsilon

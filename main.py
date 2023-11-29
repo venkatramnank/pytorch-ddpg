@@ -1,6 +1,6 @@
 #!/usr/bin/env python3 
-import sys
-sys.path.append('/Users/venkatramnankalyanakumar/Desktop/OSU/fall2023/ROB_537/project/Learning-MP')
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))))
 
 
 import numpy as np
@@ -14,11 +14,12 @@ from evaluator import Evaluator
 from ddpg import DDPG
 from util import *
 from environments.DiffDriveEnv import *
+from environments.GaitInterpEnv import *
 
 class DDoj(object):
     pass
 
-def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_episode_length=None, debug=False, visualize=False):
+def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_episode_length=None, debug=False):
 
     agent.is_training = True
     step = episode = episode_steps = 0
@@ -77,9 +78,6 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
             episode_steps = 0
             episode_reward = 0.
             episode += 1
-            
-            # Plotting it so that each time it stores it in the output folder
-            # env.plot()
 
 def test(num_episodes, agent, env, evaluate, model_path, visualize=True, debug=False):
 
@@ -132,18 +130,32 @@ if __name__ == "__main__":
 
     # env = NormalizedEnv(gym.make(args.env))
     
-    if args.env == "Diffcar":
-        args.output = get_output_folder(args.output, 'Diffcar')
+    if args.env == "Diffcar" or args.env == "Gaitinterp":
         obsts_list = [
-            {'xyt': [25, 25, 0], 'size': [5, 5]},
-            {'xyt': [20, 10, np.pi/4], 'size': [5, 1]},
-            {'xyt': [10, 30, 0], 'size': [1, 30]}
+            {'xyt': [25, 25, 0], 'size': [5, 2.5]},
+            {'xyt': [20, 10, np.pi/3], 'size': [5, 2]},
+            {'xyt': [45, 45, np.pi/4], 'size': [5, 1]},
+            {'xyt': [10, 30, 0], 'size': [3, 10]},
+            {'xyt': [40, 10, 0.1], 'size': [5, 7]},         
+            {'xyt': [20, 45, 0], 'size': [5, 5]},
+            {'xyt': [45, 25, 0], 'size': [1, 3]}
         ]
         obsts = Obstacles(obsts_list)
 
-
-        env = DiffDriveEnv(render_mode="human", obstacles=obsts, obs_space_size = np.array([0,50,0,50]), 
-                       agent_pos= [5,5,0], target_pos = [47,47,np.pi/4],pot_weight=[1.0,100.0])
+        if args.env == "Diffcar":
+            args.output = get_output_folder(args.output, 'Diffcar')
+            env = DiffDriveEnv(obstacles=obsts, render_mode='human',
+                            obs_space_size = np.array([0,50,0,50]), 
+                            agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
+                            reward_weight=[1.0, 100.0, 0.0, 0.0, 100.0], suc_tol = 2)        
+        elif args.env == "Gaitinterp":
+            args.output = get_output_folder(args.output, 'Gaitinterp')    
+            env = GaitInterpEnv("gait_data.mat",obstacles=obsts, render_mode='human',
+                                obs_space_size = np.array([0,50,0,50]), 
+                                agent_pos= [5,5,np.pi/4], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
+                                reward_weight=[1.0, 500.0, 10.0, 0.0, 100.0], suc_tol = 2)        
+        env.reset()
+        env.plot(True)
     else:
         args.output = get_output_folder(args.output, args.env)
         env = gym.make(args.env, render_mode='human')
@@ -152,7 +164,7 @@ if __name__ == "__main__":
         np.random.seed(args.seed)
         env.seed(args.seed)
 
-    if args.env == "Diffcar":
+    if args.env == "Diffcar" or args.env == "Gaitinterp":
         nb_states = env.observation_space['agent'].shape[0]
     else:
         nb_states = env.observation_space.shape[0]
@@ -166,7 +178,7 @@ if __name__ == "__main__":
 
     if args.mode == 'train':
         train(args.train_iter, agent, env, evaluate, 
-            args.validate_steps, args.output, max_episode_length=args.max_episode_length, debug=args.debug, visualize=True)
+            args.validate_steps, args.output, max_episode_length=args.max_episode_length, debug=args.debug)
 
     elif args.mode == 'test':
         test(args.validate_episodes, agent, env, evaluate, args.resume,
