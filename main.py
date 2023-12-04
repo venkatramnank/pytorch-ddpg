@@ -1,6 +1,6 @@
 #!/usr/bin/env python3 
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
+import os, sys
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname((os.path.abspath(os.path.dirname(__file__)))))))
 
 
 import numpy as np
@@ -16,7 +16,9 @@ from evaluator import Evaluator
 from ddpg import DDPG
 from util import *
 from environments.DiffDriveEnv import *
+from environments.DiffDriveSensorEnv import *
 from environments.GaitInterpEnv import *
+from environments.GaitDiscreteEnv import *
 
 # def save_learning_curve(output, episode_rewards):
 #     with open(output + '_learning_curve.csv', 'w', newline='') as csvfile:
@@ -127,12 +129,12 @@ if __name__ == "__main__":
     parser.add_argument('--ou_sigma', default=0.2, type=float, help='noise sigma') 
     parser.add_argument('--ou_mu', default=0.0, type=float, help='noise mu') 
     parser.add_argument('--validate_episodes', default=20, type=int, help='how many episode to perform during validate experiment')
-    parser.add_argument('--max_episode_length', default=500, type=int, help='')
+    parser.add_argument('--max_episode_length', default=1000, type=int, help='')
     parser.add_argument('--validate_steps', default=2000, type=int, help='how many steps to perform a validate experiment')
     parser.add_argument('--output', default='output', type=str, help='')
     parser.add_argument('--debug', dest='debug', action='store_true')
     parser.add_argument('--init_w', default=0.003, type=float, help='') 
-    parser.add_argument('--train_iter', default=200000, type=int, help='train iters each timestep')
+    parser.add_argument('--train_iter', default=500000, type=int, help='train iters each timestep')
     parser.add_argument('--epsilon', default=50000, type=int, help='linear decay of exploration policy')
     parser.add_argument('--seed', default=-1, type=int, help='')
     parser.add_argument('--resume', default='default', type=str, help='Resuming model path for testing')
@@ -148,7 +150,7 @@ if __name__ == "__main__":
 
     # env = NormalizedEnv(gym.make(args.env))
     
-    if args.env == "Diffcar" or args.env == "Gaitinterp":
+    if args.env == "Diffcar" or args.env == "Gaitinterp" or args.env == "DiffcarSensor" or args.env == "GaitDiscrete":
         obsts_list = [
             {'xyt': [25, 25, 0], 'size': [5, 2.5]},
             {'xyt': [20, 10, np.pi/3], 'size': [5, 2]},
@@ -164,14 +166,26 @@ if __name__ == "__main__":
             args.output = get_output_folder(args.output, 'Diffcar')
             env = DiffDriveEnv(obstacles=obsts, render_mode='human',
                             obs_space_size = np.array([0,50,0,50]), 
-                            agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
-                            reward_weight=[1.0, 100.0, 0.0, 0.0, 100.0], suc_tol = 2)        
+                            agent_pos= [5,5,np.pi/2], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
+                            reward_weight=[1.0, 100.0, 0.0, 500.0, 100.0], suc_tol = 2)        
         elif args.env == "Gaitinterp":
             args.output = get_output_folder(args.output, 'Gaitinterp')    
             env = GaitInterpEnv("gait_data.mat",obstacles=obsts, render_mode='human',
                                 obs_space_size = np.array([0,50,0,50]), 
-                                agent_pos= [5,5,np.pi/4], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
-                                reward_weight=[1.0, 500.0, 10.0, 0.0, 100.0], suc_tol = 2)        
+                                agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
+                                reward_weight=[1.0, 100.0, 0.0, 100.0, 100.0], suc_tol = 2)
+        elif args.env == "GaitDiscrete":
+            args.output = get_output_folder(args.output, 'GaitDiscrete')    
+            env = GaitDiscreteEnv("gait_data.mat",obstacles=obsts, render_mode='human',
+                                obs_space_size = np.array([0,50,0,50]), 
+                                agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
+                                reward_weight=[1.0, 100.0, 0.0, 100.0, 100.0], suc_tol = 2)
+        elif args.env == "DiffcarSensor":            
+            args.output = get_output_folder(args.output, 'DiffcarSensor')    
+            env = DiffDriveSensorEnv(obstacles=obsts, render_mode='human',
+                                obs_space_size = np.array([0,50,0,50]), 
+                                agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
+                                reward_weight=[1.0, 100.0, 0.0, 100.0, 100.0], suc_tol = 2)
         env.reset()
         env.plot(True)
     else:
@@ -182,8 +196,10 @@ if __name__ == "__main__":
         np.random.seed(args.seed)
         env.seed(args.seed)
 
-    if args.env == "Diffcar" or args.env == "Gaitinterp":
+    if args.env == "Diffcar" or args.env == "Gaitinterp" or args.env == "GaitDiscrete":
         nb_states = env.observation_space['agent'].shape[0]
+    elif args.env == "DiffcarSensor" or args.env == "GaitinterpSensor":
+        nb_states = env.observation_space['agent'].shape[0]+env.observation_space['potential'].shape[0]*env.observation_space['potential'].shape[1]
     else:
         nb_states = env.observation_space.shape[0]
 
