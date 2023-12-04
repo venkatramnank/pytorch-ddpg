@@ -1,6 +1,6 @@
 #!/usr/bin/env python3 
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+import os, sys
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname((os.path.abspath(os.path.dirname(__file__)))))))
 
 
 import numpy as np
@@ -16,6 +16,7 @@ from util import *
 from environments.DiffDriveEnv import *
 from environments.DiffDriveSensorEnv import *
 from environments.GaitInterpEnv import *
+from environments.GaitDiscreteEnv import *
 
 class DDoj(object):
     pass
@@ -131,7 +132,7 @@ if __name__ == "__main__":
 
     # env = NormalizedEnv(gym.make(args.env))
     
-    if args.env == "Diffcar" or args.env == "Gaitinterp" or args.env == "DiffcarSensor":
+    if args.env == "Diffcar" or args.env == "Gaitinterp" or args.env == "DiffcarSensor" or args.env == "GaitDiscrete":
         obsts_list = [
             {'xyt': [25, 25, 0], 'size': [5, 2.5]},
             {'xyt': [20, 10, np.pi/3], 'size': [5, 2]},
@@ -155,7 +156,13 @@ if __name__ == "__main__":
                                 obs_space_size = np.array([0,50,0,50]), 
                                 agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
                                 reward_weight=[1.0, 100.0, 0.0, 100.0, 100.0], suc_tol = 2)
-        if args.env == "DiffcarSensor":            
+        elif args.env == "GaitDiscrete":
+            args.output = get_output_folder(args.output, 'GaitDiscrete')    
+            env = GaitDiscreteEnv("gait_data.mat",obstacles=obsts, render_mode='human',
+                                obs_space_size = np.array([0,50,0,50]), 
+                                agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
+                                reward_weight=[1.0, 100.0, 0.0, 100.0, 100.0], suc_tol = 2)
+        elif args.env == "DiffcarSensor":            
             args.output = get_output_folder(args.output, 'DiffcarSensor')    
             env = DiffDriveSensorEnv(obstacles=obsts, render_mode='human',
                                 obs_space_size = np.array([0,50,0,50]), 
@@ -171,7 +178,7 @@ if __name__ == "__main__":
         np.random.seed(args.seed)
         env.seed(args.seed)
 
-    if args.env == "Diffcar" or args.env == "Gaitinterp":
+    if args.env == "Diffcar" or args.env == "Gaitinterp" or args.env == "GaitDiscrete":
         nb_states = env.observation_space['agent'].shape[0]
     elif args.env == "DiffcarSensor" or args.env == "GaitinterpSensor":
         nb_states = env.observation_space['agent'].shape[0]+env.observation_space['potential'].shape[0]*env.observation_space['potential'].shape[1]

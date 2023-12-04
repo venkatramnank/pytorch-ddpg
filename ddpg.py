@@ -55,8 +55,8 @@ class DDPG(object):
         self.s_t = None # Most recent state
         self.a_t = None # Most recent action
         self.is_training = True
-        
-        self.env = env
+              
+        self.env = env 
         # 
         if USE_CUDA: self.cuda()
 
@@ -118,7 +118,7 @@ class DDPG(object):
             self.s_t = s_t1
 
     def random_action(self):
-        action = np.random.uniform(-1.,1.,self.nb_actions)
+        action = self.env.action_space.sample()
         self.a_t = action
         return action
 
@@ -128,7 +128,7 @@ class DDPG(object):
         ).squeeze(0)
         action += self.is_training*max(self.epsilon, 0)*self.random_process.sample()
         action = self.env.clip_action(action)
-
+        
         if decay_epsilon:
             self.epsilon -= self.depsilon
         
