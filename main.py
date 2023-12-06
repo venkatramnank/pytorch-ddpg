@@ -8,6 +8,8 @@ import argparse
 from copy import deepcopy
 import torch
 import gym
+import csv
+import pickle
 
 from normalized_env import NormalizedEnv
 from evaluator import Evaluator
@@ -17,8 +19,14 @@ from environments.DiffDriveEnv import *
 from environments.DiffDriveSensorEnv import *
 from environments.GaitDiscreteEnv import *
 
-class DDoj(object):
-    pass
+# def save_learning_curve(output, episode_rewards):
+#     with open(output + '_learning_curve.csv', 'w', newline='') as csvfile:
+#         fieldnames = ['Episode', 'AverageReward']
+#         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+#         writer.writeheader()
+#         for episode, reward in enumerate(episode_rewards):
+#             writer.writerow({'Episode': episode, 'AverageReward': reward})
 
 def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_episode_length=None, debug=False):
 
@@ -26,6 +34,9 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
     step = episode = episode_steps = 0
     episode_reward = 0.
     observation = None
+    avg_episode_rewards = []
+    last_states = []
+
     while step < num_iterations:
         # reset if it is the start of episode
         if observation is None:
@@ -67,21 +78,26 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
 
         if done: # end of episode
             if debug: prGreen('#{}: episode_reward:{} steps:{}'.format(episode,episode_reward,step))
-
+            avg_episode_rewards.append(episode_reward)
             agent.memory.append(
                 observation,
                 agent.select_action(observation),
                 0., False
             )
-
+            last_states.append(observation) # save last states
             # reset
             observation = None
             episode_steps = 0
             episode_reward = 0.
             episode += 1
+        
+    last_states_complete = np.array(last_states)
+    with open('{}/last_states.pkl'.format(output), 'wb') as f:
+        pickle.dump(last_states_complete, f)
+
 
 def test(num_episodes, agent, env, evaluate, model_path, visualize=True, debug=False):
-
+    
     agent.load_weights(model_path)
     agent.is_training = False
     agent.eval()
@@ -121,10 +137,12 @@ if __name__ == "__main__":
     parser.add_argument('--epsilon', default=50000, type=int, help='linear decay of exploration policy')
     parser.add_argument('--seed', default=-1, type=int, help='')
     parser.add_argument('--resume', default='default', type=str, help='Resuming model path for testing')
+    parser.add_argument('--model_path', type=str, help="Model path to load for testing")
     # parser.add_argument('--l2norm', default=0.01, type=float, help='l2 weight decay') # TODO
     # parser.add_argument('--cuda', dest='cuda', action='store_true') # TODO
 
     args = parser.parse_args()
+    
     
     if args.resume == 'default':
         args.resume = 'output/{}-run0'.format(args.env)
@@ -181,7 +199,7 @@ if __name__ == "__main__":
             args.validate_steps, args.output, max_episode_length=args.max_episode_length, debug=args.debug)
 
     elif args.mode == 'test':
-        test(args.validate_episodes, agent, env, evaluate, args.resume,
+        test(args.validate_episodes, agent, env, evaluate, args.model_path,
             visualize=True, debug=args.debug)
 
     else:
