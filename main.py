@@ -15,7 +15,6 @@ from ddpg import DDPG
 from util import *
 from environments.DiffDriveEnv import *
 from environments.DiffDriveSensorEnv import *
-from environments.GaitInterpEnv import *
 from environments.GaitDiscreteEnv import *
 
 class DDoj(object):
@@ -132,42 +131,27 @@ if __name__ == "__main__":
 
     # env = NormalizedEnv(gym.make(args.env))
     
-    if args.env == "Diffcar" or args.env == "Gaitinterp" or args.env == "DiffcarSensor" or args.env == "GaitDiscrete":
-        obsts_list = [
-            {'xyt': [25, 25, 0], 'size': [5, 2.5]},
-            {'xyt': [20, 10, np.pi/3], 'size': [5, 2]},
-            {'xyt': [45, 45, np.pi/4], 'size': [5, 1]},
-            {'xyt': [10, 30, 0], 'size': [3, 10]},
-            {'xyt': [40, 10, 0.1], 'size': [5, 7]},         
-            {'xyt': [20, 45, 0], 'size': [5, 5]},
-            {'xyt': [45, 25, 0], 'size': [1, 3]}
-        ]
-        obsts = Obstacles(obsts_list)
+    if args.env == "Diffcar" or args.env == "DiffcarSensor" or args.env == "GaitDiscrete":   
+        obsts = Obstacles(fname = "obstacles.mat")
 
         if args.env == "Diffcar":
             args.output = get_output_folder(args.output, 'Diffcar')
             env = DiffDriveEnv(obstacles=obsts, render_mode='human',
                             obs_space_size = np.array([0,50,0,50]), 
-                            agent_pos= [5,5,np.pi/2], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
-                            reward_weight=[1.0, 100.0, 0.0, 500.0, 100.0], suc_tol = 2)        
-        elif args.env == "Gaitinterp":
-            args.output = get_output_folder(args.output, 'Gaitinterp')    
-            env = GaitInterpEnv("gait_data.mat",obstacles=obsts, render_mode='human',
-                                obs_space_size = np.array([0,50,0,50]), 
-                                agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
-                                reward_weight=[1.0, 100.0, 0.0, 100.0, 100.0], suc_tol = 2)
+                            init_pos= [5,5,np.pi/2], target_pos = [45,45,np.pi/4],
+                            reward_weight=[1.0, 100.0, 0.0, 500.0, 100.0], suc_tol = 2, hpfname = "vecfield.mat")        
         elif args.env == "GaitDiscrete":
             args.output = get_output_folder(args.output, 'GaitDiscrete')    
             env = GaitDiscreteEnv("gait_data.mat",obstacles=obsts, render_mode='human',
                                 obs_space_size = np.array([0,50,0,50]), 
-                                agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
-                                reward_weight=[1.0, 100.0, 0.0, 100.0, 100.0], suc_tol = 2)
+                                init_pos= [5,5,0], target_pos = [45,45,np.pi/4],
+                                reward_weight=[1.0, 10.0, 10.0, 100.0, 100.0], suc_tol = 2, hpfname = "vecfield.mat")
         elif args.env == "DiffcarSensor":            
             args.output = get_output_folder(args.output, 'DiffcarSensor')    
             env = DiffDriveSensorEnv(obstacles=obsts, render_mode='human',
                                 obs_space_size = np.array([0,50,0,50]), 
-                                agent_pos= [5,5,0], target_pos = [35,35,np.pi/4], pot_weight=[1.0, 50.0],
-                                reward_weight=[1.0, 100.0, 0.0, 100.0, 100.0], suc_tol = 2)
+                                init_pos= [5,5,0], target_pos = [45,45,np.pi/4],
+                                reward_weight=[1.0, 100.0, 10.0, 100.0, 100.0], suc_tol = 2, hpfname = "vecfield.mat")
         env.reset()
         env.plot(True)
     else:
@@ -178,9 +162,9 @@ if __name__ == "__main__":
         np.random.seed(args.seed)
         env.seed(args.seed)
 
-    if args.env == "Diffcar" or args.env == "Gaitinterp" or args.env == "GaitDiscrete":
+    if args.env == "Diffcar" or args.env == "GaitDiscrete":
         nb_states = env.observation_space['agent'].shape[0]
-    elif args.env == "DiffcarSensor" or args.env == "GaitinterpSensor":
+    elif args.env == "DiffcarSensor":
         nb_states = env.observation_space['agent'].shape[0]+env.observation_space['potential'].shape[0]*env.observation_space['potential'].shape[1]
     else:
         nb_states = env.observation_space.shape[0]
